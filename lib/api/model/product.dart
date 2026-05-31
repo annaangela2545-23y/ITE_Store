@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../app/config.dart';
+
 class Product {
   final int id;
   final String name;
@@ -18,7 +20,9 @@ class Product {
       price = (json['price'] as num?)?.toDouble() ?? 0.0;
 }
 Future<List<Product>> fetchProducts() async {
-  final response = await http.get(Uri.parse('https://smlp-pub.s3.ap-southeast-1.amazonaws.com/ite-store/dev/products.json'));
+  final apiUrl = Config().apiBaseUrl;
+  // final response = await http.get(apiUrl.replace(path: 'products.json'));
+  final response = await http.get(Uri.parse('${apiUrl}products.json'));
   if (response.statusCode == 200) {
     // Decode the response body string into a List
     List<dynamic> body = jsonDecode(response.body);

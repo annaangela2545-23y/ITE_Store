@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ite_app/api/model/product.dart';
 import 'cart_screen.dart';
-import 'view_product.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -11,20 +11,36 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Product> products = [];
-  int _cartItemCount = 0;       
+  List<Product> filteredProducts = [];
+  Map<int, int> cartItems = {}; // ✅ tracks product id → quantity
+
   @override
   void initState() {
     super.initState();
     fetchProducts().then((result) {
       setState(() {
         products = result;
+        filteredProducts = result;
       });
     });
-  }                               
+  }
 
-  void incrementCartItemCount() { 
+  int get _cartItemCount => cartItems.values.fold(0, (sum, qty) => sum + qty);
+
+  void _addToCart(Product product) {
     setState(() {
-      _cartItemCount++;          
+      cartItems[product.id] = (cartItems[product.id] ?? 0) + 1;
+    });
+  }
+
+  void _filterProducts(String query) {
+    final q = query.trim().toLowerCase();
+    setState(() {
+      filteredProducts = products.where((p) {
+        final cleaned = q.replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final name = p.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        return name.contains(cleaned);
+      }).toList();
     });
   }
 
@@ -32,88 +48,56 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: appBar(),
-      body: _body,              
+      body: _body,
     );
   }
 
-Widget get _body {
-  return SingleChildScrollView(                    
-    child: Column(                                 
-      children: [
-        GridView.builder(
-          shrinkWrap: true,                        // ← sizes to content
-          physics: const NeverScrollableScrollPhysics(), // ← outer scroll handles it
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.7,
-          ),
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            final product = products[index];
-            return Card(
-              child: Column(
-                children: [
-                  Expanded(
-                    child: GestureDetector(                          // ← wrap with GestureDetector
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProductDetailScreen(), // ← pass product
-                          ),
-                        );
-                      },
-                      child: Image.network(
-                        product.imageUrl,
-                        fit: BoxFit.cover,
+  Widget get _body {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.7,
+            ),
+            itemCount: filteredProducts.length,
+            itemBuilder: (context, index) {
+              final product = filteredProducts[index];
+              return Card(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        child: Image.network(
+                          product.imageUrl,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(product.name),
-                  ),
-                  Text('\$${product.price}'),
-                  Row(
-                    children: [
-                      Expanded(                                    // ← takes half the width
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ProductDetailScreen(),
-                              ),
-                            );
-                          },
-                          child: const Text('View Details',
-                          textAlign: TextAlign.center,),
-                        ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(product.name),
+                    ),
+                    Text('\$${product.price}'),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => _addToCart(product), // ✅
+                        child: const Text('Add to Cart'),
                       ),
-                      const SizedBox(width: 8),                   // ← spacing between buttons
-                      Expanded(                                    // ← takes other half
-                        child: ElevatedButton(
-                          onPressed: () {
-                            incrementCartItemCount();
-                          },
-                          child: const Text(
-                            'Add to Cart',
-                            textAlign: TextAlign.center,   // ← camelCase, proper named parameter
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                ],
-              ),
-            );
-          },
-        ),
-      ],
-    ),
-  );
-}
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   PreferredSizeWidget appBar() {
     return AppBar(
@@ -123,38 +107,43 @@ Widget get _body {
           const Text('ITE Store'),
           const Spacer(),
           Badge(
-            isLabelVisible: _cartItemCount > 0,       // ← underscore prefix
-            label: Text(_cartItemCount.toString()),   // ← underscore prefix
+            isLabelVisible: _cartItemCount > 0,
+            label: Text(_cartItemCount.toString()),
             child: IconButton(
               icon: const Icon(Icons.shopping_cart),
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                // ✅ pass cartItems and all products, get updated cart back
+                final updatedCart = await Navigator.push<Map<int, int>>(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const CartScreen(),
+                    builder: (context) => CartScreen(
+                      allProducts: products,
+                      initialCart: Map.from(cartItems),
+                    ),
                   ),
                 );
+                if (updatedCart != null) {
+                  setState(() => cartItems = updatedCart);
+                }
               },
             ),
           ),
         ],
       ),
-      bottom: PreferredSize(preferredSize: const Size.fromHeight(70), 
-     child: Row(
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(70),
+        child: Row(
           children: [
-            const Expanded(
+            Expanded(
               child: SearchBar(
                 hintText: 'Search products...',
-                leading: Icon(Icons.search),
+                leading: const Icon(Icons.search),
+                onChanged: (value) => _filterProducts(value),
               ),
             ),
-            // const SizedBox(width: 8),
-            // IconButton.filled(
-            //   onPressed: () {},
-            //   icon: const Icon(Icons.filter_list),
-            // ),
-          ],),
-      )
+          ],
+        ),
+      ),
     );
   }
 }

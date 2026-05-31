@@ -3,6 +3,6 @@ import 'app.dart';
 import 'app/config.dart';
 
 void main() {
-  Config().env = 'DEV'; // Set the environment to DEV for testing
+  Config().env = 'PROD'; // Set the environment to PROD for production
   runApp(App());
 }

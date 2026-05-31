@@ -3,6 +3,6 @@ import 'app.dart';
 import 'app/config.dart';
 
 void main() {
-  Config().env = 'DEV'; // Set the environment to DEV for testing
+  Config().env = 'UAT'; // Set the environment to UAT for testing
   runApp(App());
 }
