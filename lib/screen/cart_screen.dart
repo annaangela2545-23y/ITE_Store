@@ -27,6 +27,7 @@ class _CartScreenState extends State<CartScreen> {
     products = widget.allProducts
         .where((p) => quantities.containsKey(p.id) && quantities[p.id]! > 0)
         .toList();
+
   }
 
   void _updateQuantity(int id, int delta) {

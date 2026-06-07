@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ite_app/api/model/product.dart';
 import 'cart_screen.dart';
+import '../app/config.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -85,8 +86,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => _addToCart(product), // ✅
-                        child: const Text('Add to Cart'),
+                      onPressed: () => _addToCart(product),
+                      style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      ),
+                      ),
+                      child: const Text('Add to Cart'),
+
                       ),
                     ),
                   ],
@@ -100,20 +109,31 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   PreferredSizeWidget appBar() {
+    final isDemo = Config().env == 'DEMO';
     return AppBar(
+      backgroundColor: Colors.blue,
+      foregroundColor: Colors.white,
       title: Row(
         children: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.menu)),
-          const Text('ITE Store'),
-          const Spacer(),
+          IconButton(
+            onPressed: isDemo ? null : () {},
+            icon: const Icon(Icons.menu),
+          ),
+          const Text(
+            'ITE Store',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          Spacer(),
           Badge(
             isLabelVisible: _cartItemCount > 0,
             label: Text(_cartItemCount.toString()),
             child: IconButton(
               icon: const Icon(Icons.shopping_cart),
-              onPressed: () async {
-                // ✅ pass cartItems and all products, get updated cart back
-                final updatedCart = await Navigator.push<Map<int, int>>(
+              onPressed: isDemo
+                  ? null
+                  : () async {
+                final updatedCart =
+                await Navigator.push<Map<int, int>>(
                   context,
                   MaterialPageRoute(
                     builder: (context) => CartScreen(
@@ -122,8 +142,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 );
+
                 if (updatedCart != null) {
-                  setState(() => cartItems = updatedCart);
+                  setState(() {
+                    cartItems = updatedCart;
+                  });
                 }
               },
             ),
@@ -132,16 +155,13 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(70),
-        child: Row(
-          children: [
-            Expanded(
-              child: SearchBar(
-                hintText: 'Search products...',
-                leading: const Icon(Icons.search),
-                onChanged: (value) => _filterProducts(value),
-              ),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SearchBar(
+            hintText: 'Search products...',
+            leading: const Icon(Icons.search),
+            onChanged: (value) => _filterProducts(value),
+          ),
         ),
       ),
     );
